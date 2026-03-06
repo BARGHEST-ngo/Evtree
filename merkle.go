@@ -2,6 +2,7 @@ package evtree
 
 import (
 	"crypto/sha256"
+	"encoding/hex"
 	"fmt"
 	"path/filepath"
 	"sort"
@@ -9,9 +10,9 @@ import (
 )
 
 type FileEntry struct {
-	Path   string `json:"path"`
-	Size   int64  `json:"size"`
-	Sha256 string `json:"sha256"`
+	Path   string   `json:"path"`
+	Size   int64    `json:"size"`
+	Sha256 [32]byte `json:"-"`
 }
 
 type dirNode struct {
@@ -57,7 +58,7 @@ func hashDir(node *dirNode) [32]byte {
 	var children []child
 
 	for _, f := range node.files {
-		leafStr := fmt.Sprintf("evtree:v1:%s:%d:%s\n", f.Path, f.Size, f.Sha256)
+		leafStr := fmt.Sprintf("evtree:v1:%s:%d:%s\n", f.Path, f.Size, hex.EncodeToString(f.Sha256[:]))
 		leafBytes := append([]byte{0x00}, []byte(leafStr)...)
 		children = append(children, child{name: f.Path, hash: sha256.Sum256(leafBytes)})
 	}

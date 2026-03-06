@@ -42,10 +42,10 @@ func TestBuildMerkleSingleEntry(t *testing.T) {
 	e := FileEntry{Path: "hello.txt", Size: 5, Sha256: "abcd1234"}
 	root := buildMerkle([]FileEntry{e})
 
-	// Leaf hash for the file.
+	// Leaf hash for the file
 	leafStr := fmt.Sprintf("evtree:v1:%s:%d:%s\n", "hello.txt", e.Size, e.Sha256)
 	leafHash := sha256.Sum256(append([]byte{0x00}, []byte(leafStr)...))
-	// Root directory wraps the single leaf: SHA256(0x01 || leafHash).
+	// Root directory wraps the single leaf: SHA256(0x01 || leafHash)
 	want := sha256.Sum256(append([]byte{0x01}, leafHash[:]...))
 
 	t.Logf("root: %x", root)
@@ -63,7 +63,7 @@ func TestBuildMerkleTwoEntries(t *testing.T) {
 	}
 	root := buildMerkle(entries)
 
-	// Both files in root dir, sorted: a.txt, b.txt.
+
 	leafA := fmt.Sprintf("evtree:v1:%s:%d:%s\n", "a.txt", int64(1), "aa")
 	leafB := fmt.Sprintf("evtree:v1:%s:%d:%s\n", "b.txt", int64(2), "bb")
 	hA := sha256.Sum256(append([]byte{0x00}, []byte(leafA)...))
