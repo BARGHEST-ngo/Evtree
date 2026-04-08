@@ -9,11 +9,7 @@ import (
 	"github.com/karrick/godirwalk"
 )
 
-type acqDir struct {
-	Path string `json:"path"`
-}
-
-func MerkleFromDir(root string) ([32]byte, error) {
+func AquireDir(root string) ([]FileEntry, error) {
 	var entries []FileEntry
 	err := godirwalk.Walk(root, &godirwalk.Options{
 		FollowSymbolicLinks: true,
@@ -38,7 +34,7 @@ func MerkleFromDir(root string) ([32]byte, error) {
 			if err != nil {
 				return err
 			}
-
+			
 			entries = append(entries, FileEntry{
 				Path:   rel,
 				Size:   fi.Size(),
@@ -47,6 +43,14 @@ func MerkleFromDir(root string) ([32]byte, error) {
 			return nil
 		},
 	})
+	if err != nil {
+		return []FileEntry{}, err
+	}
+	return entries, nil
+}
+
+func MerkleFromDir(root string) ([32]byte, error) {
+	entries, err := AquireDir(root) 
 	if err != nil {
 		return [32]byte{}, err
 	}
