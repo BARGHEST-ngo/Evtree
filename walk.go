@@ -9,12 +9,11 @@ import (
 	"github.com/karrick/godirwalk"
 )
 
-func AquireDir(root string) ([]FileEntry, error) {
+func AcquireDir(root string) ([]FileEntry, error) {
 	var entries []FileEntry
 	err := godirwalk.Walk(root, &godirwalk.Options{
 		FollowSymbolicLinks: true,
 		Callback: func(path string, de *godirwalk.Dirent) error {
-			//since merkle tree reconstructs the directory from the file paths, we can skip dir entries
 			if de.IsDir() {
 				return nil
 			}
@@ -25,16 +24,21 @@ func AquireDir(root string) ([]FileEntry, error) {
 			}
 			rel = filepath.ToSlash(rel)
 
-			fi, err := os.Stat(path)
-			if err != nil {
-				return nil
-			}
-
-			sum, err := sha256File(path)
+			f, err := os.Open(path)
 			if err != nil {
 				return err
 			}
-			
+			defer f.Close()
+
+			fi, err := f.Stat()
+			if err != nil {
+				return err
+			}
+			sum, err := sha256Reader(f)
+			if err != nil {
+				return err
+			}
+
 			entries = append(entries, FileEntry{
 				Path:   rel,
 				Size:   fi.Size(),
@@ -44,31 +48,24 @@ func AquireDir(root string) ([]FileEntry, error) {
 		},
 	})
 	if err != nil {
-		return []FileEntry{}, err
+		return nil, err
 	}
 	return entries, nil
 }
 
 func MerkleFromDir(root string) ([32]byte, error) {
-	entries, err := AquireDir(root) 
+	entries, err := AcquireDir(root)
 	if err != nil {
 		return [32]byte{}, err
 	}
 	return buildMerkle(entries), nil
 }
 
-func sha256File(path string) ([32]byte, error) {
-	f, err := os.Open(path)
-	if err != nil {
-		return [32]byte{}, err
-	}
-	defer f.Close()
-
+func sha256Reader(r io.Reader) ([32]byte, error) {
 	h := sha256.New()
-	if _, err := io.Copy(h, f); err != nil {
+	if _, err := io.Copy(h, r); err != nil {
 		return [32]byte{}, err
 	}
-
 	var out [32]byte
 	copy(out[:], h.Sum(nil))
 	return out, nil

@@ -3,9 +3,10 @@ package evtree
 import (
 	"crypto/sha256"
 	"encoding/hex"
-	"fmt"
+	"path"
 	"path/filepath"
 	"sort"
+	"strconv"
 	"strings"
 )
 
@@ -55,12 +56,23 @@ func hashDir(node *dirNode) [32]byte {
 		hash [32]byte
 	}
 
-	var children []child
+	children := make([]child, 0, len(node.files)+len(node.subdirs))
+
+	var hexBuf [64]byte
 
 	for _, f := range node.files {
-		leafStr := fmt.Sprintf("evtree:v1:%s:%d:%s\n", f.Path, f.Size, hex.EncodeToString(f.Sha256[:]))
-		leafBytes := append([]byte{0x00}, []byte(leafStr)...)
-		children = append(children, child{name: f.Path, hash: sha256.Sum256(leafBytes)})
+		hex.Encode(hexBuf[:], f.Sha256[:])
+		buf := make([]byte, 0, 1+10+len(f.Path)+1+20+1+64+1)
+		buf = append(buf, 0x00)
+		buf = append(buf, "evtree:v1:"...)
+		buf = append(buf, f.Path...)
+		buf = append(buf, ':')
+		buf = strconv.AppendInt(buf, f.Size, 10)
+		buf = append(buf, ':')
+		buf = append(buf, hexBuf[:]...)
+		buf = append(buf, '\n')
+
+		children = append(children, child{name: f.Path, hash: sha256.Sum256(buf)})
 	}
 
 	for name, sub := range node.subdirs {
@@ -75,7 +87,8 @@ func hashDir(node *dirNode) [32]byte {
 		return sha256.Sum256([]byte{0x00})
 	}
 
-	combined := []byte{0x01}
+	combined := make([]byte, 1, 1+32*len(children))
+	combined[0] = 0x01
 	for _, c := range children {
 		combined = append(combined, c.hash[:]...)
 	}
@@ -84,7 +97,7 @@ func hashDir(node *dirNode) [32]byte {
 
 func normalize(p string) string {
 	p = filepath.ToSlash(p)
-	p = filepath.Clean(p)
+	p = path.Clean(p)
 	p = strings.TrimPrefix(p, "/")
 	return p
 }
