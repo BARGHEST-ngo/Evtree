@@ -11,7 +11,7 @@ import (
 )
 
 type TreeNode struct {
-	Hash     Hash32               `json:"hash"`
+	Hash     Hash32               `json:"merkle_hash"`
 	Size     int64                `json:"size,omitempty"`
 	Sha256   *Hash32              `json:"sha256,omitempty"`
 	Children map[string]*TreeNode `json:"children,omitempty"`
