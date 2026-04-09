@@ -7,20 +7,20 @@ import (
 	"testing"
 )
 
-func testSHA(s string) [32]byte { return sha256.Sum256([]byte(s)) }
+func testSHA(s string) Hash32 { return Hash32(sha256.Sum256([]byte(s))) }
 
-func leafHash(name string, size int64, h [32]byte) [32]byte {
+func leafHash(name string, size int64, h Hash32) Hash32 {
 	leafStr := fmt.Sprintf("evtree:v1:%s:%d:%s\n", name, size, hex.EncodeToString(h[:]))
-	return sha256.Sum256(append([]byte{0x00}, []byte(leafStr)...))
+	return Hash32(sha256.Sum256(append([]byte{0x00}, []byte(leafStr)...)))
 }
 
-func dirHash(hashes ...[32]byte) [32]byte {
+func dirHash(hashes ...Hash32) Hash32 {
 	buf := make([]byte, 1, 1+32*len(hashes))
 	buf[0] = 0x01
 	for _, h := range hashes {
 		buf = append(buf, h[:]...)
 	}
-	return sha256.Sum256(buf)
+	return Hash32(sha256.Sum256(buf))
 }
 
 func TestMerkleDeterminism(t *testing.T) {
@@ -35,8 +35,8 @@ func TestMerkleDeterminism(t *testing.T) {
 		{Path: "b.txt", Size: 20, Sha256: testSHA("b")},
 	}
 
-	root1 := buildMerkle(entries1)
-	root2 := buildMerkle(entries2)
+	root1 := buildMerkle(entries1).Hash
+	root2 := buildMerkle(entries2).Hash
 
 	if root1 != root2 {
 		t.Errorf("root must be identical regardless of input order:\n root1=%x\n root2=%x", root1, root2)
@@ -44,8 +44,8 @@ func TestMerkleDeterminism(t *testing.T) {
 }
 
 func TestBuildMerkleEmpty(t *testing.T) {
-	root := buildMerkle(nil)
-	want := sha256.Sum256([]byte{0x00})
+	root := buildMerkle(nil).Hash
+	want := Hash32(sha256.Sum256([]byte{0x00}))
 	if root != want {
 		t.Errorf("empty tree: got %x, want %x", root, want)
 	}
@@ -54,7 +54,7 @@ func TestBuildMerkleEmpty(t *testing.T) {
 func TestBuildMerkleSingleEntry(t *testing.T) {
 	sha := testSHA("hello-content")
 	e := FileEntry{Path: "hello.txt", Size: 5, Sha256: sha}
-	root := buildMerkle([]FileEntry{e})
+	root := buildMerkle([]FileEntry{e}).Hash
 
 	want := dirHash(leafHash("hello.txt", 5, sha))
 	if root != want {
@@ -69,7 +69,7 @@ func TestBuildMerkleTwoEntries(t *testing.T) {
 		{Path: "a.txt", Size: 1, Sha256: shaA},
 		{Path: "b.txt", Size: 2, Sha256: shaB},
 	}
-	root := buildMerkle(entries)
+	root := buildMerkle(entries).Hash
 
 	want := dirHash(leafHash("a.txt", 1, shaA), leafHash("b.txt", 2, shaB))
 	if root != want {
@@ -86,9 +86,9 @@ func TestBuildMerkleOddEntries(t *testing.T) {
 		{Path: "b.txt", Size: 2, Sha256: shaB},
 		{Path: "c.txt", Size: 3, Sha256: shaC},
 	}
-	root := buildMerkle(entries)
+	root := buildMerkle(entries).Hash
 
-	if root == ([32]byte{}) {
+	if root == (Hash32{}) {
 		t.Fatal("root must not be zero")
 	}
 
@@ -97,7 +97,7 @@ func TestBuildMerkleOddEntries(t *testing.T) {
 		{Path: "b.txt", Size: 2, Sha256: shaB},
 		{Path: "c.txt", Size: 3, Sha256: testSHA("c-tampered")},
 	}
-	rootMod := buildMerkle(modified)
+	rootMod := buildMerkle(modified).Hash
 
 	if root == rootMod {
 		t.Error("changing entry data must change the root")
@@ -113,21 +113,25 @@ func TestBuildMerkleSubdirectories(t *testing.T) {
 		{Path: "cmd/run.go", Size: 50, Sha256: shaRun},
 		{Path: "cmd/help.go", Size: 30, Sha256: shaHelp},
 	}
-	root := buildMerkle(entries)
+	tree := buildMerkle(entries)
 
 	hCmd := dirHash(leafHash("help.go", 30, shaHelp), leafHash("run.go", 50, shaRun))
 	want := dirHash(hCmd, leafHash("main.go", 100, shaMain))
 
-	if root != want {
-		t.Errorf("subdirectories: got %x, want %x", root, want)
+	if tree.Hash != want {
+		t.Errorf("subdirectories: got %x, want %x", tree.Hash, want)
+	}
+
+	if tree.Children["cmd"].Hash != hCmd {
+		t.Errorf("cmd dir hash: got %x, want %x", tree.Children["cmd"].Hash, hCmd)
 	}
 }
 
 func TestBuildMerklePathNormalization(t *testing.T) {
 	sha := testSHA("f")
-	r1 := buildMerkle([]FileEntry{{Path: "dir/file.txt", Size: 10, Sha256: sha}})
-	r2 := buildMerkle([]FileEntry{{Path: "dir//file.txt", Size: 10, Sha256: sha}})
-	r3 := buildMerkle([]FileEntry{{Path: "/dir/file.txt", Size: 10, Sha256: sha}})
+	r1 := buildMerkle([]FileEntry{{Path: "dir/file.txt", Size: 10, Sha256: sha}}).Hash
+	r2 := buildMerkle([]FileEntry{{Path: "dir//file.txt", Size: 10, Sha256: sha}}).Hash
+	r3 := buildMerkle([]FileEntry{{Path: "/dir/file.txt", Size: 10, Sha256: sha}}).Hash
 
 	if r1 != r2 || r1 != r3 {
 		t.Errorf("normalized paths should produce same root:\n r1=%x\n r2=%x\n r3=%x", r1, r2, r3)
@@ -136,8 +140,8 @@ func TestBuildMerklePathNormalization(t *testing.T) {
 
 func TestBuildMerkleSizeMatters(t *testing.T) {
 	sha := testSHA("same-content")
-	r1 := buildMerkle([]FileEntry{{Path: "f.txt", Size: 1, Sha256: sha}})
-	r2 := buildMerkle([]FileEntry{{Path: "f.txt", Size: 2, Sha256: sha}})
+	r1 := buildMerkle([]FileEntry{{Path: "f.txt", Size: 1, Sha256: sha}}).Hash
+	r2 := buildMerkle([]FileEntry{{Path: "f.txt", Size: 2, Sha256: sha}}).Hash
 
 	if r1 == r2 {
 		t.Error("different sizes must produce different roots")
@@ -146,8 +150,8 @@ func TestBuildMerkleSizeMatters(t *testing.T) {
 
 func TestBuildMerklePathMatters(t *testing.T) {
 	sha := testSHA("same-content")
-	r1 := buildMerkle([]FileEntry{{Path: "a.txt", Size: 1, Sha256: sha}})
-	r2 := buildMerkle([]FileEntry{{Path: "b.txt", Size: 1, Sha256: sha}})
+	r1 := buildMerkle([]FileEntry{{Path: "a.txt", Size: 1, Sha256: sha}}).Hash
+	r2 := buildMerkle([]FileEntry{{Path: "b.txt", Size: 1, Sha256: sha}}).Hash
 
 	if r1 == r2 {
 		t.Error("different paths must produce different roots")

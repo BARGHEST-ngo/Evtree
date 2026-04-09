@@ -53,20 +53,20 @@ func AcquireDir(root string) ([]FileEntry, error) {
 	return entries, nil
 }
 
-func MerkleFromDir(root string) ([32]byte, error) {
+func MerkleFromDir(root string) (Hash32, error) {
 	entries, err := AcquireDir(root)
 	if err != nil {
-		return [32]byte{}, err
+		return Hash32{}, err
 	}
-	return buildMerkle(entries), nil
+	return buildMerkle(entries).Hash, nil
 }
 
-func sha256Reader(r io.Reader) ([32]byte, error) {
+func sha256Reader(r io.Reader) (Hash32, error) {
 	h := sha256.New()
 	if _, err := io.Copy(h, r); err != nil {
-		return [32]byte{}, err
+		return Hash32{}, err
 	}
-	var out [32]byte
+	var out Hash32
 	copy(out[:], h.Sum(nil))
 	return out, nil
 }

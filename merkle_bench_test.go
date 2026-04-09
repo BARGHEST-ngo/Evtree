@@ -6,24 +6,6 @@ import (
 	"testing"
 )
 
-func BenchmarkLeafHash(b *testing.B) {
-	node := &dirNode{
-		name: "",
-		files: []FileEntry{
-			{
-				Path:   "evidence/file.bin",
-				Size:   1 << 20,
-				Sha256: sha256.Sum256([]byte("benchmark-content")),
-			},
-		},
-		subdirs: make(map[string]*dirNode),
-	}
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
-		hashDir(node)
-	}
-}
-
 func BenchmarkBuildMerkle100(b *testing.B) {
 	benchmarkBuildMerkle(b, 100, false)
 }
@@ -49,7 +31,7 @@ func benchmarkBuildMerkle(b *testing.B, n int, nested bool) {
 		entries[i] = FileEntry{
 			Path:   p,
 			Size:   int64(i * 512),
-			Sha256: sha256.Sum256([]byte(p)),
+			Sha256: Hash32(sha256.Sum256([]byte(p))),
 		}
 	}
 	b.ResetTimer()

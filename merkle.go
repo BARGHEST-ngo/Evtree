@@ -10,10 +10,17 @@ import (
 	"strings"
 )
 
+type TreeNode struct {
+	Hash     Hash32               `json:"hash"`
+	Size     int64                `json:"size,omitempty"`
+	Sha256   *Hash32              `json:"sha256,omitempty"`
+	Children map[string]*TreeNode `json:"children,omitempty"`
+}
+
 type FileEntry struct {
-	Path   string   `json:"path"`
-	Size   int64    `json:"size"`
-	Sha256 [32]byte `json:"-"`
+	Path   string `json:"path"`
+	Size   int64  `json:"size"`
+	Sha256 Hash32 `json:"sha256"`
 }
 
 type dirNode struct {
@@ -22,9 +29,9 @@ type dirNode struct {
 	subdirs map[string]*dirNode
 }
 
-func buildMerkle(entries []FileEntry) [32]byte {
+func buildMerkle(entries []FileEntry) *TreeNode {
 	root := buildTree(entries)
-	return hashDir(root)
+	return buildTreeNode(root)
 }
 
 func buildTree(entries []FileEntry) *dirNode {
@@ -46,19 +53,21 @@ func buildTree(entries []FileEntry) *dirNode {
 		file.Path = parts[len(parts)-1]
 		cur.files = append(cur.files, file)
 	}
-
 	return root
 }
 
-func hashDir(node *dirNode) [32]byte {
+func buildTreeNode(node *dirNode) *TreeNode {
 	type child struct {
 		name string
-		hash [32]byte
+		hash Hash32
 	}
 
-	children := make([]child, 0, len(node.files)+len(node.subdirs))
+	result := &TreeNode{
+		Children: make(map[string]*TreeNode),
+	}
 
 	var hexBuf [64]byte
+	var childList []child
 
 	for _, f := range node.files {
 		hex.Encode(hexBuf[:], f.Sha256[:])
@@ -72,27 +81,38 @@ func hashDir(node *dirNode) [32]byte {
 		buf = append(buf, hexBuf[:]...)
 		buf = append(buf, '\n')
 
-		children = append(children, child{name: f.Path, hash: sha256.Sum256(buf)})
+		leafHash := Hash32(sha256.Sum256(buf))
+		sha256Copy := f.Sha256
+		result.Children[f.Path] = &TreeNode{
+			Hash:   leafHash,
+			Size:   f.Size,
+			Sha256: &sha256Copy,
+		}
+		childList = append(childList, child{name: f.Path, hash: leafHash})
 	}
 
 	for name, sub := range node.subdirs {
-		children = append(children, child{name: name, hash: hashDir(sub)})
+		subNode := buildTreeNode(sub)
+		result.Children[name] = subNode
+		childList = append(childList, child{name: name, hash: subNode.Hash})
 	}
 
-	sort.Slice(children, func(i, j int) bool {
-		return children[i].name < children[j].name
+	sort.Slice(childList, func(i, j int) bool {
+		return childList[i].name < childList[j].name
 	})
 
-	if len(children) == 0 {
-		return sha256.Sum256([]byte{0x00})
+	if len(childList) == 0 {
+		result.Hash = Hash32(sha256.Sum256([]byte{0x00}))
+		return result
 	}
 
-	combined := make([]byte, 1, 1+32*len(children))
+	combined := make([]byte, 1, 1+32*len(childList))
 	combined[0] = 0x01
-	for _, c := range children {
+	for _, c := range childList {
 		combined = append(combined, c.hash[:]...)
 	}
-	return sha256.Sum256(combined)
+	result.Hash = Hash32(sha256.Sum256(combined))
+	return result
 }
 
 func normalize(p string) string {
