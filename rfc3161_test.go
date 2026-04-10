@@ -7,14 +7,14 @@ import (
 )
 
 func TestVerifyTimestampNoToken(t *testing.T) {
-	bag := Bag{}
+	bag := Acquisition{}
 	if err := VerifyTimestamp(bag); err == nil {
 		t.Error("expected error for bag with no timestamp token")
 	}
 }
 
 func TestTimestampInvalidTSA(t *testing.T) {
-	bag := makeBag(t)
+	bag := makeAcquisition(t)
 	err := Timestamp(&bag, "http://invalid.tsa.example.com")
 	if err == nil {
 		t.Error("expected error for invalid TSA URL")
@@ -26,7 +26,7 @@ func TestTimestampAndVerify(t *testing.T) {
 		t.Skip("skipping RFC 3161 integration test in short mode")
 	}
 
-	bag := makeBag(t)
+	bag := makeAcquisition(t)
 
 	if err := Timestamp(&bag, DefaultTSA); err != nil {
 		t.Fatalf("Timestamp: %v", err)
@@ -44,12 +44,12 @@ func TestTimestampAndVerify(t *testing.T) {
 	}
 }
 
-func TestVerifyTimestampTamperedBag(t *testing.T) {
+func TestVerifyTimestampTamperedAcquisition(t *testing.T) {
 	if testing.Short() {
 		t.Skip("skipping RFC 3161 integration test in short mode")
 	}
 
-	bag := makeBag(t)
+	bag := makeAcquisition(t)
 
 	if err := Timestamp(&bag, DefaultTSA); err != nil {
 		t.Fatalf("Timestamp: %v", err)
@@ -63,7 +63,7 @@ func TestVerifyTimestampTamperedBag(t *testing.T) {
 	}
 }
 
-func makeBag(t *testing.T) Bag {
+func makeAcquisition(t *testing.T) Acquisition {
 	t.Helper()
 	dir := t.TempDir()
 	if err := os.WriteFile(filepath.Join(dir, "evidence.txt"), []byte("test evidence"), 0644); err != nil {

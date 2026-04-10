@@ -18,7 +18,7 @@ type CaseMetadata struct {
 	Notes        string `json:"notes,omitempty"`
 }
 
-type Bag struct {
+type Acquisition struct {
 	Timestamp      time.Time    `json:"acquired_at"`
 	Case           CaseMetadata `json:"case"`
 	Entries        []FileEntry  `json:"entries"`
@@ -43,15 +43,15 @@ func (m CaseMetadata) validate() error {
 	return nil
 }
 
-func Acquire(root string, meta CaseMetadata) (Bag, []EvidenceError, error) {
+func Acquire(root string, meta CaseMetadata) (Acquisition, []EvidenceError, error) {
 	if err := meta.validate(); err != nil {
-		return Bag{}, nil, err
+		return Acquisition{}, nil, err
 	}
 	entries, everror, err := AcquireDir(root)
 	if err != nil {
-		return Bag{}, everror, err
+		return Acquisition{}, everror, err
 	}
-	return Bag{
+	return Acquisition{
 		Timestamp: time.Now(),
 		Case:      meta,
 		Entries:   entries,
@@ -59,7 +59,7 @@ func Acquire(root string, meta CaseMetadata) (Bag, []EvidenceError, error) {
 	}, everror, nil
 }
 
-func (b Bag) Save(filename string) error {
+func (b Acquisition) Save(filename string) error {
 	data, err := json.MarshalIndent(b, "", "  ")
 	if err != nil {
 		return err
@@ -67,15 +67,15 @@ func (b Bag) Save(filename string) error {
 	return os.WriteFile(filename, data, 0644)
 }
 
-func LoadBag(path string) (Bag, error) {
+func LoadAcquisition(path string) (Acquisition, error) {
 	file, err := os.Open(path)
 	if err != nil {
-		return Bag{}, err
+		return Acquisition{}, err
 	}
 	defer file.Close()
-	var b Bag
+	var b Acquisition
 	if err := json.NewDecoder(file).Decode(&b); err != nil {
-		return Bag{}, err
+		return Acquisition{}, err
 	}
 	return b, nil
 }

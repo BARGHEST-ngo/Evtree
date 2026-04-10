@@ -27,7 +27,7 @@ type Modified struct {
 	Sha256New Hash32
 }
 
-func Compare(comp1 Bag, comp2 Bag) ([]Added, []Deleted, []Modified, error) {
+func Compare(comp1 Acquisition, comp2 Acquisition) ([]Added, []Deleted, []Modified, error) {
 	if comp1.Root.Hash == comp2.Root.Hash {
 		return nil, nil, nil, nil
 	}

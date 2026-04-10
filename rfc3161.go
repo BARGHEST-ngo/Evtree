@@ -13,7 +13,7 @@ import (
 
 const DefaultTSA = "https://freetsa.org/tsr"
 
-func Timestamp(bag *Bag, tsaURL string) error {
+func Timestamp(bag *Acquisition, tsaURL string) error {
 	hash := bag.Root.Hash
 
 	req, err := timestamp.CreateRequest(bytes.NewReader(hash[:]), &timestamp.RequestOptions{
@@ -54,7 +54,7 @@ func Timestamp(bag *Bag, tsaURL string) error {
 	return nil
 }
 
-func VerifyTimestamp(bag Bag) error {
+func VerifyTimestamp(bag Acquisition) error {
 	if bag.TimestampToken == nil {
 		return fmt.Errorf("bag has no timestamp token")
 	}
