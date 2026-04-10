@@ -5,3 +5,53 @@ Evtree (Evidence Tree) is a Go library that computes a deterministic, directory-
 This is particularly important for maintaining chain of custody in digital forensic investigations. When evidence is acquired from a device, any subsequent handling, transfer, or storage introduces the possibility of accidental or deliberate modification. A single root hash computed at the time of acquisition serves as a cryptographic seal over the entire evidence set. At any later stage, whether during analysis, peer review, or courtroom presentation, the same hash can be recomputed from the files on hand and compared against the original. If even a single byte in any file has changed, or if a file has been added, removed, or moved to a different directory, the root hash will differ, immediately revealing that the evidence has been altered. Because the tree mirrors the directory structure, it is also possible to isolate which branch of the hierarchy was affected without rehashing the entire collection. This provides both a tamper detection mechanism and an efficient means of auditing evidence integrity across custodial transfers.
 
 This work is inspired by [ECo-Bag: An elastic container based on merkle tree as a universal digital evidence bag](https://www.sciencedirect.com/science/article/abs/pii/S2666281724000404). Acknowledgements to the authors.
+
+## Installation
+
+```
+go get evtree
+```
+
+## API
+
+| Function | Description |
+|---|---|
+| `Acquire(root string) (Bag, []EvidenceError, error)` | Walk a directory and produce a signed evidence bag |
+| `AcquireDir(root string) ([]FileEntry, []EvidenceError, error)` | Walk a directory and return raw file entries |
+| `MerkleFromDir(root string) (Hash32, error)` | Compute the root Merkle hash of a directory |
+| `Compare(comp1, comp2 Bag) ([]Added, []Deleted, []Modified, error)` | Compare two bags and return changes |
+| `(Bag) Save(filename string) error` | Serialise a bag to JSON |
+| `LoadBag(path string) (Bag, error)` | Load a bag from JSON |
+
+> **Planned:** `Verify(bag Bag, root string)` — re-acquire a live directory and compare against a saved bag in one call.
+
+## Usage
+
+```go
+// Acquire evidence at time of seizure
+bag1, errs, err := evtree.Acquire("/path/to/evidence")
+if err != nil {
+    log.Fatal(err)
+}
+if len(errs) > 0 {
+    // handle files that could not be read
+}
+
+// Save to disk
+if err := bag1.Save("evidence.json"); err != nil {
+    log.Fatal(err)
+}
+
+// Later: reload and compare against a re-acquired directory
+bag2, _, err := evtree.Acquire("/path/to/evidence")
+if err != nil {
+    log.Fatal(err)
+}
+
+added, deleted, modified, err := evtree.Compare(bag1, bag2)
+if err != nil {
+    log.Fatal(err)
+}
+
+fmt.Printf("Added: %d  Deleted: %d  Modified: %d\n", len(added), len(deleted), len(modified))
+```
