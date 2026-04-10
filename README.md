@@ -47,7 +47,7 @@ go get github.com/BARGHEST-ngo/Evtree
 
 ## TODO
 
-- `Verify(acquisition Bag, root string)` — re-acquire a live directory and compare against a saved acquisition in one call
+- Verify — re-acquire a live directory and compare against a saved acquisition in one call
 - Audit trail API — structured, appendable log of acquisition, transfer, comparison, and verification events
 - Digital signatures — sign the root hash with the examiner's private key for non-repudiation
 - Age encryption — seal the acquisition and audit log into a single tamper-evident encrypted artefact
