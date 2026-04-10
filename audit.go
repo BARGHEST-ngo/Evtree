@@ -1,6 +1,9 @@
 package evtree
 
-import "time"
+import (
+	"path"
+	"time"
+)
 
 type Event struct {
 	Mtime  time.Time
@@ -24,10 +27,11 @@ type Modified struct {
 	Sha256New Hash32
 }
 
-func compare(comp1 Bag, comp2 Bag) ([]Added, []Deleted, []Modified, error) {
+func Compare(comp1 Bag, comp2 Bag) ([]Added, []Deleted, []Modified, error) {
 	if comp1.Root.Hash == comp2.Root.Hash {
 		return nil, nil, nil, nil
 	}
+
 	mtime1 := make(map[string]time.Time, len(comp1.Entries))
 	for _, e := range comp1.Entries {
 		mtime1[e.Path] = e.Mtime
@@ -41,39 +45,90 @@ func compare(comp1 Bag, comp2 Bag) ([]Added, []Deleted, []Modified, error) {
 	var deleted []Deleted
 	var modified []Modified
 
-	for name, node := range comp1.Root.Children {
-		if node.Children != nil {
-			continue
-		}
-		if v, ok := comp2.Root.Children[name]; ok {
-			if node.Hash != v.Hash {
-				modified = append(modified, Modified{
-					Path:      name,
-					MtimeOld:  mtime1[name],
-					MtimeNew:  mtime2[name],
-					Sha256Old: node.Hash,
-					Sha256New: v.Hash,
-				})
+	walkNodes(comp1.Root, comp2.Root, "", mtime1, mtime2, &added, &deleted, &modified)
+
+	return added, deleted, modified, nil
+}
+
+func walkNodes(
+	node1, node2 *TreeNode,
+	dir string,
+	mtime1, mtime2 map[string]time.Time,
+	added *[]Added,
+	deleted *[]Deleted,
+	modified *[]Modified,
+) {
+	for name, child1 := range node1.Children {
+		fullPath := path.Join(dir, name)
+		child2, exists := node2.Children[name]
+
+		if child1.Children != nil {
+			if !exists || child2.Children == nil {
+				collectDeleted(child1, fullPath, mtime1, deleted)
+			} else if child1.Hash != child2.Hash {
+				walkNodes(child1, child2, fullPath, mtime1, mtime2, added, deleted, modified)
 			}
 		} else {
-			deleted = append(deleted, Deleted{Event{
-				Mtime:  mtime1[name],
-				Path:   name,
-				Sha256: node.Hash,
+			if !exists {
+				*deleted = append(*deleted, Deleted{Event{
+					Mtime:  mtime1[fullPath],
+					Path:   fullPath,
+					Sha256: child1.Hash,
+				}})
+			} else if child1.Hash != child2.Hash {
+				*modified = append(*modified, Modified{
+					Path:      fullPath,
+					MtimeOld:  mtime1[fullPath],
+					MtimeNew:  mtime2[fullPath],
+					Sha256Old: child1.Hash,
+					Sha256New: child2.Hash,
+				})
+			}
+		}
+	}
+
+	for name, child2 := range node2.Children {
+		fullPath := path.Join(dir, name)
+		if _, exists := node1.Children[name]; !exists {
+			if child2.Children != nil {
+				collectAdded(child2, fullPath, mtime2, added)
+			} else {
+				*added = append(*added, Added{Event{
+					Mtime:  mtime2[fullPath],
+					Path:   fullPath,
+					Sha256: child2.Hash,
+				}})
+			}
+		}
+	}
+}
+
+func collectDeleted(node *TreeNode, dir string, mtime1 map[string]time.Time, deleted *[]Deleted) {
+	for name, child := range node.Children {
+		fullPath := path.Join(dir, name)
+		if child.Children != nil {
+			collectDeleted(child, fullPath, mtime1, deleted)
+		} else {
+			*deleted = append(*deleted, Deleted{Event{
+				Mtime:  mtime1[fullPath],
+				Path:   fullPath,
+				Sha256: child.Hash,
 			}})
 		}
 	}
-	for name, node := range comp2.Root.Children {
-		if node.Children != nil {
-			continue
-		}
-		if _, ok := comp1.Root.Children[name]; !ok {
-			added = append(added, Added{Event{
-				Mtime:  mtime2[name],
-				Path:   name,
-				Sha256: node.Hash,
+}
+
+func collectAdded(node *TreeNode, dir string, mtime2 map[string]time.Time, added *[]Added) {
+	for name, child := range node.Children {
+		fullPath := path.Join(dir, name)
+		if child.Children != nil {
+			collectAdded(child, fullPath, mtime2, added)
+		} else {
+			*added = append(*added, Added{Event{
+				Mtime:  mtime2[fullPath],
+				Path:   fullPath,
+				Sha256: child.Hash,
 			}})
 		}
 	}
-	return added, deleted, modified, nil
 }
