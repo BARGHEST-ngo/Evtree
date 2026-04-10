@@ -65,6 +65,7 @@ func AcquireDir(root string) ([]FileEntry, []EvidenceError, error) {
 				Path:   rel,
 				Size:   fi.Size(),
 				Sha256: sum,
+				Mtime: fi.ModTime(),
 			})
 			return nil
 		},

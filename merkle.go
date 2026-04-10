@@ -8,6 +8,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"time"
 )
 
 type TreeNode struct {
@@ -21,6 +22,7 @@ type FileEntry struct {
 	Path   string `json:"path"`
 	Size   int64  `json:"size"`
 	Sha256 Hash32 `json:"sha256"`
+	Mtime time.Time `json:"modificationtime"`
 }
 
 type dirNode struct {

@@ -7,8 +7,9 @@ import (
 )
 
 type Bag struct {
-	Timestamp time.Time `json:"acquired_at"`
-	Root      *TreeNode `json:"root"`
+	Timestamp time.Time   `json:"acquired_at"`
+	Entries   []FileEntry `json:"entries"`
+	Root      *TreeNode   `json:"root"`
 }
 
 func Acquire(root string) (Bag, []EvidenceError, error) {
@@ -18,6 +19,7 @@ func Acquire(root string) (Bag, []EvidenceError, error) {
 	}
 	return Bag{
 		Timestamp: time.Now(),
+		Entries:   entries,
 		Root:      buildMerkle(entries),
 	}, everror, nil
 }
