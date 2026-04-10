@@ -3,6 +3,7 @@ package evtree
 import (
 	"bytes"
 	"crypto"
+	"crypto/sha256"
 	"fmt"
 	"io"
 	"net/http"
@@ -43,7 +44,8 @@ func Timestamp(bag *Bag, tsaURL string) error {
 		return fmt.Errorf("parsing timestamp response: %w", err)
 	}
 
-	if !bytes.Equal(ts.HashedMessage, hash[:]) {
+	digestedHash := sha256.Sum256(hash[:])
+	if !bytes.Equal(ts.HashedMessage, digestedHash[:]) {
 		return fmt.Errorf("TSA response hash does not match bag root hash")
 	}
 
@@ -63,7 +65,8 @@ func VerifyTimestamp(bag Bag) error {
 	}
 
 	hash := bag.Root.Hash
-	if !bytes.Equal(ts.HashedMessage, hash[:]) {
+	digestedHash := sha256.Sum256(hash[:])
+	if !bytes.Equal(ts.HashedMessage, digestedHash[:]) {
 		return fmt.Errorf("timestamp hash does not match bag root hash")
 	}
 
