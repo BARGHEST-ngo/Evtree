@@ -20,20 +20,37 @@ This work is inspired by [ECo-Bag: An elastic container based on merkle tree as 
 go get evtree
 ```
 
-## API
+## Reference
+
+### Acquisition
 
 | Function | Description |
 |---|---|
 | `Acquire(root string, meta CaseMetadata) (Bag, []EvidenceError, error)` | Walk a directory and produce an evidence bag |
 | `AcquireDir(root string) ([]FileEntry, []EvidenceError, error)` | Walk a directory and return raw file entries |
 | `MerkleFromDir(root string) (Hash32, error)` | Compute the root Merkle hash of a directory |
+
+### Integrity
+
+| Function | Description |
+|---|---|
 | `Compare(comp1, comp2 Bag) ([]Added, []Deleted, []Modified, error)` | Compare two bags and return changes |
 | `Timestamp(bag *Bag, tsaURL string) error` | Request an RFC 3161 timestamp from a TSA and store it in the bag |
 | `VerifyTimestamp(bag Bag) error` | Verify the stored RFC 3161 timestamp token against the bag root hash |
+
+### Storage
+
+| Function | Description |
+|---|---|
 | `(Bag) Save(filename string) error` | Serialise a bag to JSON |
 | `LoadBag(path string) (Bag, error)` | Load a bag from JSON |
 
-> **Planned:** `Verify(bag Bag, root string)` — re-acquire a live directory and compare against a saved bag in one call.
+## TODO
+
+- `Verify(bag Bag, root string)` — re-acquire a live directory and compare against a saved bag in one call
+- Audit trail API — structured, appendable log of acquisition, transfer, comparison, and verification events
+- Digital signatures — sign the root hash with the examiner's private key for non-repudiation
+- Age encryption — seal the bag and audit log into a single tamper-evident encrypted artefact
 
 ## Usage
 
