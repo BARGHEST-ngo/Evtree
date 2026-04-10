@@ -1,4 +1,4 @@
-module evtree
+module github.com/BARGHEST-ngo/Evtree
 
 go 1.21
 

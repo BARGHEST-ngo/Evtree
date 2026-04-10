@@ -17,7 +17,7 @@ This work is inspired by [ECo-Bag: An elastic container based on merkle tree as 
 ## Installation
 
 ```
-go get evtree
+go get github.com/BARGHEST-ngo/Evtree
 ```
 
 ## Reference
