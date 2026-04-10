@@ -5,12 +5,19 @@ import (
 	"io"
 	"os"
 	"path/filepath"
-
+	"time"
 	"github.com/karrick/godirwalk"
 )
 
-func AcquireDir(root string) ([]FileEntry, error) {
+type EvidenceError struct {
+	Timestamp time.Time
+	Everror error 
+	File string
+}
+
+func AcquireDir(root string) ([]FileEntry, []EvidenceError, error) {
 	var entries []FileEntry
+	var evidenceerror []EvidenceError
 	err := godirwalk.Walk(root, &godirwalk.Options{
 		FollowSymbolicLinks: true,
 		Callback: func(path string, de *godirwalk.Dirent) error {
@@ -26,17 +33,32 @@ func AcquireDir(root string) ([]FileEntry, error) {
 
 			f, err := os.Open(path)
 			if err != nil {
-				return err
+				evidenceerror = append(evidenceerror, EvidenceError{
+					Timestamp: time.Now(),
+					Everror: err,
+					File: rel,
+				})
+				return nil
 			}
 			defer f.Close()
 
 			fi, err := f.Stat()
 			if err != nil {
-				return err
+				evidenceerror = append(evidenceerror, EvidenceError{
+					Timestamp: time.Now(),
+					Everror: err,
+					File: rel,
+				})
+				return nil
 			}
 			sum, err := sha256Reader(f)
 			if err != nil {
-				return err
+				evidenceerror = append(evidenceerror, EvidenceError{
+					Timestamp: time.Now(),
+					Everror: err,
+					File: rel,
+				})
+				return nil
 			}
 
 			entries = append(entries, FileEntry{
@@ -48,13 +70,13 @@ func AcquireDir(root string) ([]FileEntry, error) {
 		},
 	})
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
-	return entries, nil
+	return entries, evidenceerror, nil
 }
 
 func MerkleFromDir(root string) (Hash32, error) {
-	entries, err := AcquireDir(root)
+	entries, _, err := AcquireDir(root)
 	if err != nil {
 		return Hash32{}, err
 	}

@@ -15,7 +15,7 @@ func TestAcquireDirBasic(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	entries, err := AcquireDir(dir)
+	entries, _, err := AcquireDir(dir)
 	if err != nil {
 		t.Fatalf("AcquireDir: %v", err)
 	}
@@ -53,7 +53,7 @@ func TestAcquireDirNestedDir(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	entries, err := AcquireDir(dir)
+	entries, _, err := AcquireDir(dir)
 	if err != nil {
 		t.Fatalf("AcquireDir: %v", err)
 	}
@@ -79,9 +79,12 @@ func TestAcquireDirUnreadable(t *testing.T) {
 	}
 	t.Cleanup(func() { os.Chmod(secret, 0644) })
 
-	_, err := AcquireDir(dir)
-	if err == nil {
-		t.Error("expected error for unreadable file, got nil")
+	_, errs, err := AcquireDir(dir)
+	if err != nil {
+		t.Fatalf("AcquireDir: %v", err)
+	}
+	if len(errs) == 0 {
+		t.Error("expected evidence error for unreadable file, got none")
 	}
 }
 
@@ -97,7 +100,7 @@ func TestAcquireDirSymlink(t *testing.T) {
 		t.Skip("symlinks not supported on this platform:", err)
 	}
 
-	entries, err := AcquireDir(dir)
+	entries, _, err := AcquireDir(dir)
 	if err != nil {
 		t.Fatalf("AcquireDir: %v", err)
 	}

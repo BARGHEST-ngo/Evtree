@@ -11,15 +11,15 @@ type Bag struct {
 	Root      *TreeNode `json:"root"`
 }
 
-func Acquire(root string) (Bag, error) {
-	entries, err := AcquireDir(root)
+func Acquire(root string) (Bag, []EvidenceError, error) {
+	entries, everror, err := AcquireDir(root)
 	if err != nil {
-		return Bag{}, err
+		return Bag{}, everror, err
 	}
 	return Bag{
 		Timestamp: time.Now(),
 		Root:      buildMerkle(entries),
-	}, nil
+	}, everror, nil
 }
 
 func (b Bag) Save(filename string) error {
@@ -33,7 +33,7 @@ func (b Bag) Save(filename string) error {
 func LoadBag(path string) (Bag, error) {
 	file, err := os.Open(path)
 	if err != nil {
-		return Bag{}, err
+		return Bag{},  err
 	}
 	defer file.Close()
 	var b Bag
