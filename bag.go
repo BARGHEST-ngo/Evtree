@@ -2,6 +2,7 @@ package evtree
 
 import (
 	"encoding/json"
+	"errors"
 	"os"
 	"time"
 )
@@ -18,13 +19,34 @@ type CaseMetadata struct {
 }
 
 type Bag struct {
-	Timestamp time.Time    `json:"acquired_at"`
-	Case      CaseMetadata `json:"case"`
-	Entries   []FileEntry  `json:"entries"`
-	Root      *TreeNode    `json:"root"`
+	Timestamp      time.Time    `json:"acquired_at"`
+	Case           CaseMetadata `json:"case"`
+	Entries        []FileEntry  `json:"entries"`
+	Root           *TreeNode    `json:"root"`
+	TimestampToken []byte       `json:"timestamp_token,omitempty"`
+	TimestampedAt  time.Time    `json:"timestamped_at,omitempty"`
+}
+
+func (m CaseMetadata) validate() error {
+	if m.CaseNumber == "" {
+		return errors.New("case_number is required")
+	}
+	if m.ExhibitRef == "" {
+		return errors.New("exhibit_ref is required")
+	}
+	if m.Examiner == "" {
+		return errors.New("examiner is required")
+	}
+	if m.Organisation == "" {
+		return errors.New("organisation is required")
+	}
+	return nil
 }
 
 func Acquire(root string, meta CaseMetadata) (Bag, []EvidenceError, error) {
+	if err := meta.validate(); err != nil {
+		return Bag{}, nil, err
+	}
 	entries, everror, err := AcquireDir(root)
 	if err != nil {
 		return Bag{}, everror, err
