@@ -6,19 +6,32 @@ import (
 	"time"
 )
 
-type Bag struct {
-	Timestamp time.Time   `json:"acquired_at"`
-	Entries   []FileEntry `json:"entries"`
-	Root      *TreeNode   `json:"root"`
+type CaseMetadata struct {
+	CaseNumber   string `json:"case_number"`
+	ExhibitRef   string `json:"exhibit_ref"`
+	Examiner     string `json:"examiner"`
+	Organisation string `json:"organisation"`
+	DeviceIMEI   string `json:"device_imei,omitempty"`
+	DeviceSerial string `json:"device_serial,omitempty"`
+	DeviceModel  string `json:"device_model,omitempty"`
+	Notes        string `json:"notes,omitempty"`
 }
 
-func Acquire(root string) (Bag, []EvidenceError, error) {
+type Bag struct {
+	Timestamp time.Time    `json:"acquired_at"`
+	Case      CaseMetadata `json:"case"`
+	Entries   []FileEntry  `json:"entries"`
+	Root      *TreeNode    `json:"root"`
+}
+
+func Acquire(root string, meta CaseMetadata) (Bag, []EvidenceError, error) {
 	entries, everror, err := AcquireDir(root)
 	if err != nil {
 		return Bag{}, everror, err
 	}
 	return Bag{
 		Timestamp: time.Now(),
+		Case:      meta,
 		Entries:   entries,
 		Root:      buildMerkle(entries),
 	}, everror, nil
@@ -35,7 +48,7 @@ func (b Bag) Save(filename string) error {
 func LoadBag(path string) (Bag, error) {
 	file, err := os.Open(path)
 	if err != nil {
-		return Bag{},  err
+		return Bag{}, err
 	}
 	defer file.Close()
 	var b Bag
