@@ -45,12 +45,13 @@ go get github.com/BARGHEST-ngo/Evtree
 |---|---|
 | `(Acquisition) Save(filename string) error` | Serialise an acquisition to JSON |
 | `LoadAcquisition(path string) (Acquisition, error)` | Load an acquisition from JSON |
+| `Seal(acquisition Acquisition, evidenceDir string, recipient age.Recipient, outPath string) error` | Encrypt the evidence directory into a tamper-evident age-encrypted ZIP archive, with the acquisition manifest written inside and as a detached JSON file |
+| `Unseal(sealedPath string, identity age.Identity, outDir string) (Acquisition, error)` | Decrypt a sealed archive and extract its contents, returning the acquisition manifest |
 
 ## TODO
 
 - Audit trail API — structured, appendable log of acquisition, transfer, comparison, and verification events
 - Digital signatures — sign the root hash with the examiner's private key for non-repudiation
-- Age encryption — seal the acquisition and audit log into a single tamper-evident encrypted artefact
 
 ## Usage
 
