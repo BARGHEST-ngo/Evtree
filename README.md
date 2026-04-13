@@ -26,7 +26,7 @@ go get github.com/BARGHEST-ngo/Evtree
 
 | Function | Description |
 |---|---|
-| `Acquire(root string, meta CaseMetadata) (Bag, []EvidenceError, error)` | Walk a directory and produce an evidence acquisition |
+| `Acquire(root string, meta CaseMetadata) (Acquisition, []EvidenceError, error)` | Walk a directory and produce an evidence acquisition |
 | `AcquireDir(root string) ([]FileEntry, []EvidenceError, error)` | Walk a directory and return raw file entries |
 | `MerkleFromDir(root string) (Hash32, error)` | Compute the root Merkle hash of a directory |
 
@@ -34,20 +34,20 @@ go get github.com/BARGHEST-ngo/Evtree
 
 | Function | Description |
 |---|---|
-| `Compare(comp1, comp2 Bag) ([]Added, []Deleted, []Modified, error)` | Compare two acquisitions and return changes |
-| `Timestamp(acquisition *Bag, tsaURL string) error` | Request an RFC 3161 timestamp from a TSA and store it in the acquisition |
-| `VerifyTimestamp(acquisition Bag) error` | Verify the stored RFC 3161 timestamp token against the acquisition root hash |
+| `Compare(comp1, comp2 Acquisition) ([]Added, []Deleted, []Modified, error)` | Compare two acquisitions and return changes |
+| `Verify(root string, meta CaseMetadata, comp1 string) (Result, []EvidenceError, error)` | Re-acquire a live directory and compare against a saved acquisition in one call |
+| `Timestamp(acquisition *Acquisition, tsaURL string) error` | Request an RFC 3161 timestamp from a TSA and store it in the acquisition |
+| `VerifyTimestamp(acquisition Acquisition) error` | Verify the stored RFC 3161 timestamp token against the acquisition root hash |
 
 ### Storage
 
 | Function | Description |
 |---|---|
-| `(Bag) Save(filename string) error` | Serialise a acquisition to JSON |
-| `LoadAcquisition(path string) (Bag, error)` | Load a acquisition from JSON |
+| `(Acquisition) Save(filename string) error` | Serialise an acquisition to JSON |
+| `LoadAcquisition(path string) (Acquisition, error)` | Load an acquisition from JSON |
 
 ## TODO
 
-- Verify — re-acquire a live directory and compare against a saved acquisition in one call
 - Audit trail API — structured, appendable log of acquisition, transfer, comparison, and verification events
 - Digital signatures — sign the root hash with the examiner's private key for non-repudiation
 - Age encryption — seal the acquisition and audit log into a single tamper-evident encrypted artefact

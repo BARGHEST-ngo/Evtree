@@ -27,7 +27,7 @@ type Acquisition struct {
 	TimestampedAt  time.Time    `json:"timestamped_at,omitempty"`
 }
 
-func (m CaseMetadata) validate() error {
+func (m CaseMetadata) Validate() error {
 	if m.CaseNumber == "" {
 		return errors.New("case_number is required")
 	}
@@ -44,7 +44,7 @@ func (m CaseMetadata) validate() error {
 }
 
 func Acquire(root string, meta CaseMetadata) (Acquisition, []EvidenceError, error) {
-	if err := meta.validate(); err != nil {
+	if err := meta.Validate(); err != nil {
 		return Acquisition{}, nil, err
 	}
 	entries, everror, err := AcquireDir(root)

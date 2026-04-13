@@ -27,6 +27,48 @@ type Modified struct {
 	Sha256New Hash32
 }
 
+type Result struct {
+	Verified bool
+	Event []Event
+	Modified []Modified
+}
+	
+
+func Verify(root string, meta CaseMetadata, comp1 string) (Result, []EvidenceError, error) {
+	acq1, everror, err := Acquire(root, meta)
+	if err != nil {
+		return Result{}, everror, err
+	}
+
+	comp1Load, err := LoadAcquisition(comp1)
+	if err != nil {
+		return Result{}, everror, err
+	}
+
+	add, del, mod, err := Compare(acq1, comp1Load)
+	if err != nil {
+		return Result{}, everror, err
+	}
+
+	if len(add) == 0 && len(del) == 0 && len(mod) == 0 {
+		return Result{Verified: true}, everror, nil
+	}
+
+	events := make([]Event, 0, len(add)+len(del))
+	for _, a := range add {
+		events = append(events, a.Event)
+	}
+	for _, d := range del {
+		events = append(events, d.Event)
+	}
+
+	return Result{
+		Verified: false,
+		Event:    events,
+		Modified: mod,
+	}, everror, nil
+}
+
 func Compare(comp1 Acquisition, comp2 Acquisition) ([]Added, []Deleted, []Modified, error) {
 	if comp1.Root.Hash == comp2.Root.Hash {
 		return nil, nil, nil, nil
