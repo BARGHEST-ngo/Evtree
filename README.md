@@ -48,9 +48,18 @@ go get github.com/BARGHEST-ngo/Evtree
 | `Seal(acquisition Acquisition, evidenceDir string, recipient age.Recipient, outPath string) error` | Encrypt the evidence directory into a tamper-evident age-encrypted ZIP archive, with the acquisition manifest written inside and as a detached JSON file |
 | `Unseal(sealedPath string, identity age.Identity, outDir string) (Acquisition, error)` | Decrypt a sealed archive and extract its contents, returning the acquisition manifest |
 
+### Audit Trail
+
+A hash-chained, append-only log of events (acquisition, transfer, sealing, access, etc.). Each entry records the action, outcome, examiner and case metadata, host, and PID, and is stamped with a sequence number and timestamp. Entries are linked by SHA-256: every entry stores the hash of the previous entry (`prev_hash`) and its own hash (`entry_hash`), so any modification, deletion, or reordering of an earlier entry breaks the chain. Entries are written to the provided `io.Writer` as newline-delimited JSON.
+
+| Function | Description |
+|---|---|
+| `AuditLog(w io.Writer) *Logger` | Create a logger that appends entries to `w` |
+| `(*Logger) Log(action Action, outcome Outcome, input TrailEntry) (TrailEntry, error)` | Append one hash-chained entry, returning the completed entry |
+
 ## TODO
 
-- Audit trail API — structured, appendable log of acquisition, transfer, comparison, and verification events
+- Audit trail verification — re-read a persisted trail, recompute each hash, and confirm the chain is intact
 - Digital signatures — sign the root hash with the examiner's private key for non-repudiation
 
 ## Usage
@@ -103,4 +112,32 @@ if err != nil {
 }
 
 fmt.Printf("Added: %d  Deleted: %d  Modified: %d\n", len(added), len(deleted), len(modified))
+```
+
+### Audit Trail
+
+```go
+// Open an append-only log file for the trail
+f, err := os.OpenFile("audit.log", os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0644)
+if err != nil {
+    log.Fatal(err)
+}
+defer f.Close()
+
+logger := evtree.AuditLog(f)
+
+// Record a successful acquisition
+_, err = logger.Log(evtree.ActionAcquire, evtree.OutcomeSuccess, evtree.TrailEntry{
+    Examiner:   "J. Smith",
+    Org:        "Digital Forensics Lab",
+    CaseNumber: "2024-001",
+    ExhibitRef: "EX-01",
+    Subject:    "Acquired disk image",
+    Details:    map[string]string{"tool": "dc3dd"},
+})
+if err != nil {
+    log.Fatal(err)
+}
+
+// Each call appends a hash-chained line to audit.log
 ```
