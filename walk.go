@@ -81,7 +81,7 @@ func MerkleFromDir(root string) (Hash32, error) {
 	if err != nil {
 		return Hash32{}, err
 	}
-	return buildMerkle(entries).Hash, nil
+	return BuildMerkle(entries).Hash, nil
 }
 
 func sha256Reader(r io.Reader) (Hash32, error) {

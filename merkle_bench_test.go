@@ -36,6 +36,6 @@ func benchmarkBuildMerkle(b *testing.B, n int, nested bool) {
 	}
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		buildMerkle(entries)
+		BuildMerkle(entries)
 	}
 }
