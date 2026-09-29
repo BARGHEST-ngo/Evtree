@@ -31,7 +31,7 @@ type dirNode struct {
 	subdirs map[string]*dirNode
 }
 
-func buildMerkle(entries []FileEntry) *TreeNode {
+func BuildMerkle(entries []FileEntry) *TreeNode {
 	root := buildTree(entries)
 	return buildTreeNode(root)
 }
