@@ -55,8 +55,20 @@ func Acquire(root string, meta CaseMetadata) (Acquisition, []EvidenceError, erro
 		Timestamp: time.Now(),
 		Case:      meta,
 		Entries:   entries,
-		Root:      buildMerkle(entries),
+		Root:      BuildMerkle(entries),
 	}, everror, nil
+}
+
+func AcquireEntries(entries []FileEntry, meta CaseMetadata) (Acquisition, error) {
+	if err := meta.Validate(); err != nil {
+		return Acquisition{}, err
+	}
+	return Acquisition{
+		Timestamp: time.Now(),
+		Case:      meta,
+		Entries:   entries,
+		Root:      BuildMerkle(entries),
+	}, nil
 }
 
 func (b Acquisition) Save(filename string) error {
